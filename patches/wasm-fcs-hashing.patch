@@ -1,0 +1,85 @@
+diff --git a/src/Compiler/Facilities/Hashing.fs b/src/Compiler/Facilities/Hashing.fs
+index e1ca8856a..7aa6f2833 100644
+--- a/src/Compiler/Facilities/Hashing.fs
++++ b/src/Compiler/Facilities/Hashing.fs
+@@ -1,15 +1,28 @@
+ namespace Internal.Utilities.Hashing
+ 
+ open System
+-open System.Threading
++
++module internal PortableHash =
++
++    let private computePair leftSeed rightSeed (bytes: byte array) =
++        let mutable left = leftSeed
++        let mutable right = rightSeed
++
++        for value in bytes do
++            left <- (left ^^^ uint64 value) * 1099511628211UL
++            right <- (right ^^^ uint64 value) * 14029467366897019727UL
++
++        Array.append (BitConverter.GetBytes left) (BitConverter.GetBytes right)
++
++    let computeHash bytes = computePair 14695981039346656037UL 1099511628211UL bytes
++
++    let computeHash32 bytes =
++        Array.append (computeHash bytes) (computePair 7809847782465536322UL 9650029242287828579UL bytes)
+ 
+ /// Tools for hashing things with MD5 into a string that can be used as a cache key.
+ module internal Md5StringHasher =
+ 
+-    let private md5 =
+-        new ThreadLocal<_>(fun () -> System.Security.Cryptography.MD5.Create())
+-
+-    let private computeHash (bytes: byte array) = md5.Value.ComputeHash(bytes)
++    let private computeHash bytes = PortableHash.computeHash bytes
+ 
+     let hashString (s: string) =
+         System.Text.Encoding.UTF8.GetBytes(s) |> computeHash
+@@ -43,14 +56,7 @@ module internal Md5StringHasher =
+ 
+ module internal Md5Hasher =
+ 
+-    let private md5 =
+-        new ThreadLocal<_>(fun () -> System.Security.Cryptography.MD5.Create())
+-
+-    let computeHash (bytes: byte array) =
+-        // md5.Value.ComputeHash(bytes) TODO: the threadlocal is not working in new VS extension
+-        ignore md5
+-        let md5 = System.Security.Cryptography.MD5.Create()
+-        md5.ComputeHash(bytes)
++    let computeHash bytes = PortableHash.computeHash bytes
+ 
+     let empty = Array.empty
+ 
+diff --git a/src/Compiler/AbstractIL/ilwrite.fs b/src/Compiler/AbstractIL/ilwrite.fs
+index 66b3e6985..0e79e998a 100644
+--- a/src/Compiler/AbstractIL/ilwrite.fs
++++ b/src/Compiler/AbstractIL/ilwrite.fs
+@@ -4183,4 +4183,11 @@ let WriteILBinary (filename:string, options: ILBinaryWriterOptions, modul: ILModu
+-          use sha =
+-              match options.checksumAlgorithm with
+-              | HashAlgorithm.Sha1 -> System.Security.Cryptography.SHA1.Create() :> System.Security.Cryptography.HashAlgorithm
+-              | HashAlgorithm.Sha256 -> System.Security.Cryptography.SHA256.Create() :> System.Security.Cryptography.HashAlgorithm
++          let computeHash bytes =
++              let computePair leftSeed rightSeed =
++                  let mutable left = leftSeed
++                  let mutable right = rightSeed
++                  for value in bytes do
++                      left <- (left ^^^ uint64 value) * 1099511628211UL
++                      right <- (right ^^^ uint64 value) * 14029467366897019727UL
++                  Array.append (BitConverter.GetBytes left) (BitConverter.GetBytes right)
++              Array.append
++                  (computePair 14695981039346656037UL 1099511628211UL)
++                  (computePair 7809847782465536322UL 9650029242287828579UL)
+@@ -4188,2 +4195,2 @@ let WriteILBinary (filename:string, options: ILBinaryWriterOptions, modul: ILModuleDef
+-          let hCode = sha.ComputeHash code
+-          let hData = sha.ComputeHash data
++          let hCode = computeHash code
++          let hData = computeHash data
+@@ -4197,3 +4204,3 @@ let WriteILBinary (filename:string, options: ILBinaryWriterOptions, modul: ILModMod
+-               | _ -> sha.ComputeHash metadata |]
++               | _ -> computeHash metadata |]
+             |> Array.collect id
+-            |> sha.ComputeHash
++            |> computeHash

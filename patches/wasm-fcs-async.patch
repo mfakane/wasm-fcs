@@ -1,0 +1,198 @@
+diff --git a/src/Compiler/Driver/fsc.fs b/src/Compiler/Driver/fsc.fs
+index 3b6a3bfef..e0065bbcf 100644
+--- a/src/Compiler/Driver/fsc.fs
++++ b/src/Compiler/Driver/fsc.fs
+@@ -442,7 +442,7 @@ let main1
+         exiter: Exiter,
+         diagnosticsLoggerProvider: IDiagnosticsLoggerProvider,
+         disposables: DisposablesTracker
+-    ) =
++    ) = async {
+ 
+     // See Bug 735819
+     let lcidFromCodePage =
+@@ -510,6 +510,18 @@ let main1
+             exiter.Exit 1
+ 
+     tcConfigB.conditionalDefines <- "COMPILED" :: tcConfigB.conditionalDefines
++    tcConfigB.parallelIlxGen <- false
++    tcConfigB.parallelReferenceResolution <- ParallelReferenceResolution.Off
++    tcConfigB.typeCheckingConfig <-
++        { tcConfigB.typeCheckingConfig with
++            Mode = TypeCheckingMode.Sequential
++        }
++    tcConfigB.optSettings <-
++        { tcConfigB.optSettings with
++            processingMode = FSharp.Compiler.Optimizer.OptimizationProcessingMode.Sequential
++        }
++    tcConfigB.parallelParsing <- false
++
+ 
+     // Override ParallelReferenceResolution set on the CLI with an environment setting if present.
+     match getParallelReferenceResolutionFromEnvironment () with
+@@ -591,9 +604,8 @@ let main1
+         TcAssemblyResolutions.SplitNonFoundationalResolutions(tcConfig)
+ 
+     // Import basic assemblies
+-    let tcGlobals, frameworkTcImports =
++    let! tcGlobals, frameworkTcImports =
+         TcImports.BuildFrameworkTcImports(foundationalTcConfigP, sysRes, otherRes)
+-        |> Async.RunImmediate
+ 
+     let ilSourceDocs =
+         [
+@@ -605,7 +604,7 @@ let main1
+ 
+     // Parse sourceFiles
+     ReportTime tcConfig "Parse inputs"
+-    use unwindParsePhase = UseBuildPhase BuildPhase.Parse
++    use _ = UseBuildPhase BuildPhase.Parse
+ 
+     let inputs =
+         ParseInputFiles(tcConfig, lexResourceManager, sourceFiles, diagnosticsLogger, false)
+@@ -639,9 +638,8 @@ let main1
+     // Import other assemblies
+     ReportTime tcConfig "Import non-system references"
+ 
+-    let tcImports =
++    let! tcImports =
+         TcImports.BuildNonFrameworkTcImports(tcConfigP, frameworkTcImports, otherRes, knownUnresolved, dependencyProvider)
+-        |> Async.RunImmediate
+ 
+     // register tcImports to be disposed in future
+     disposables.Register tcImports
+@@ -655,5 +653,5 @@ let main1
+     // Build the initial type checking environment
+     ReportTime tcConfig "Typecheck"
+
+-    use unwindParsePhase = UseBuildPhase BuildPhase.TypeCheck
++    use _ = UseBuildPhase BuildPhase.TypeCheck
+
+@@ -669,7 +667,7 @@ let main1
+     AbortOnError(diagnosticsLogger, exiter)
+     ReportTime tcConfig "Typechecked"
+ 
+-    Args(
++    return Args(
+         ctok,
+         tcGlobals,
+         tcImports,
+@@ -685,6 +683,7 @@ let main1
+         exiter,
+         ilSourceDocs
+     )
++    }
+ 
+ /// Second phase of compilation.
+ ///   - Write the signature file, check some attributes
+@@ -1213,11 +1212,11 @@ let CompileFromCommandLineArguments
+         loggerProvider,
+         tcImportsCapture,
+         dynamicAssemblyCreator
+-    ) =
++    ) = async {
+ 
+     use disposables = new DisposablesTracker()
+ 
+-    main1 (
++    let! args = main1 (
+         ctok,
+         argv,
+         legacyReferenceResolver,
+@@ -1228,8 +1227,10 @@ let CompileFromCommandLineArguments
+         loggerProvider,
+         disposables
+     )
++    args
+     |> main2
+     |> main3
+     |> main4 (tcImportsCapture, dynamicAssemblyCreator)
+     |> main5
+     |> main6 dynamicAssemblyCreator
++    }
+diff --git a/src/Compiler/Driver/fsc.fsi b/src/Compiler/Driver/fsc.fsi
+index 7a62da169..5ae0ea99c 100644
+--- a/src/Compiler/Driver/fsc.fsi
++++ b/src/Compiler/Driver/fsc.fsi
+@@ -53,7 +53,7 @@ val CompileFromCommandLineArguments:
+     loggerProvider: IDiagnosticsLoggerProvider *
+     tcImportsCapture: (TcImports -> unit) option *
+     dynamicAssemblyCreator: (TcConfig * TcGlobals * string * ILModuleDef -> unit) option ->
+-        unit
++        Async<unit>
+ 
+ /// Read the parallelReferenceResolution flag from environment variables
+ val internal getParallelReferenceResolutionFromEnvironment: unit -> ParallelReferenceResolution option
+diff --git a/src/Compiler/Legacy/LegacyHostedCompilerForTesting.fs b/src/Compiler/Legacy/LegacyHostedCompilerForTesting.fs
+index 9c66a8cf5..0974d5e48 100644
+--- a/src/Compiler/Legacy/LegacyHostedCompilerForTesting.fs
++++ b/src/Compiler/Legacy/LegacyHostedCompilerForTesting.fs
+@@ -113,6 +113,7 @@ type internal InProcCompiler(legacyReferenceResolver) =
+                 None,
+                 None
+             )
++            |> Async.RunImmediate
+         with
+         | StopProcessing -> ()
+         | ReportedError _
+diff --git a/src/Compiler/Service/service.fs b/src/Compiler/Service/service.fs
+index c0dd6e21d..83a16ef52 100644
+--- a/src/Compiler/Service/service.fs
++++ b/src/Compiler/Service/service.fs
+@@ -47,27 +47,28 @@ module CompileHelpers =
+ 
+         diagnostics, diagnosticsLogger, loggerProvider
+ 
+-    let tryCompile diagnosticsLogger f =
++    let tryCompile diagnosticsLogger f = async {
+         use _ = UseBuildPhase BuildPhase.Parse
+         use _ = UseDiagnosticsLogger diagnosticsLogger
+ 
+         let exiter = StopProcessingExiter()
+ 
+         try
+-            f exiter
+-            None
++            do! f exiter
++            return None
+         with e ->
+             stopProcessingRecovery e range0
+-            Some e
++            return Some e
++        }
+ 
+     /// Compile using the given flags.  Source files names are resolved via the FileSystem API. The output file must be given by a -o flag.
+-    let compileFromArgs (ctok, argv: string[], legacyReferenceResolver, tcImportsCapture, dynamicAssemblyCreator) =
++    let compileFromArgs (ctok, argv: string[], legacyReferenceResolver, tcImportsCapture, dynamicAssemblyCreator) = async {
+ 
+         let diagnostics, diagnosticsLogger, loggerProvider =
+             mkCompilationDiagnosticsHandlers (argv |> Array.contains "--flaterrors")
+ 
+-        let result =
++        let! result =
+             tryCompile diagnosticsLogger (fun exiter ->
+                 CompileFromCommandLineArguments(
+                     ctok,
+                     argv,
+@@ -79,9 +80,10 @@ module CompileHelpers =
+                     loggerProvider,
+                     tcImportsCapture,
+                     dynamicAssemblyCreator
+-                ))
++                ))
+ 
+-        diagnostics.ToArray(), result
++        return diagnostics.ToArray(), result
++        }
+ 
+ [<Sealed; AutoSerializable(false)>]
+ // There is typically only one instance of this type in an IDE process.
+@@ -318,7 +320,7 @@ type FSharpChecker
+ 
+         async {
+             let ctok = CompilationThreadToken()
+-            return CompileHelpers.compileFromArgs (ctok, argv, legacyReferenceResolver, None, None)
++            return! CompileHelpers.compileFromArgs (ctok, argv, legacyReferenceResolver, None, None)
+         }
+ 
+     /// This function is called when the entire environment is known to have changed for reasons not encoded in the ProjectOptions of a project/compilation.

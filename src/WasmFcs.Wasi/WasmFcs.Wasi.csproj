@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>wasi-wasm</RuntimeIdentifier>
+    <UsingWasiRuntimeWorkload>true</UsingWasiRuntimeWorkload>
+    <OutputType>Exe</OutputType>
+    <PublishTrimmed>false</PublishTrimmed>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <UseAppHost>false</UseAppHost>
+    <WasmInitialHeapSize>268435456</WasmInitialHeapSize>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../WasmFcs.Core/WasmFcs.Core.fsproj" />
+    <PackageReference Include="FSharp.Core" Version="$(FSharpCoreVersion)" />
+    <Reference Include="FSharp.Compiler.Service" Condition="'$(WasmFcsPath)' != ''">
+      <HintPath>$(WasmFcsPath)</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <WasmAssembliesToBundle Include="$(WasmFcsPath)" Condition="'$(WasmFcsPath)' != ''" />
+    <TrimmerRootAssembly Include="WasmFcs.Wasi" />
+    <TrimmerRootAssembly Include="WasmFcs.Core" />
+    <TrimmerRootAssembly Include="FSharp.Compiler.Service" />
+    <TrimmerRootAssembly Include="FSharp.Core" />
+  </ItemGroup>
+  <Import Project="../WasmFcs.ReferencePack.props" />
+</Project>

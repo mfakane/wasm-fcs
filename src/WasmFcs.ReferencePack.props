@@ -1,0 +1,15 @@
+<Project>
+  <ItemGroup>
+    <FcsReferenceAssembly Include="$(NETCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/*/ref/$(TargetFramework)/netstandard.dll" />
+    <FcsReferenceAssembly Include="$(NETCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/*/ref/$(TargetFramework)/System.Runtime.dll" />
+    <FcsReferenceAssembly Include="$(NETCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/*/ref/$(TargetFramework)/System.Runtime.Numerics.dll" />
+    <FcsReferenceAssembly Include="$(NETCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/*/ref/$(TargetFramework)/System.Collections.dll" />
+    <FcsReferenceAssembly Include="$(NETCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/*/ref/$(TargetFramework)/System.Threading.dll" />
+    <FcsReferenceAssembly Include="$(NETCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/*/ref/$(TargetFramework)/System.Console.dll" />
+    <FcsReferenceAssembly Include="$(NETCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/*/ref/$(TargetFramework)/System.Net.Requests.dll" />
+    <FcsReferenceAssembly Include="$(NETCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/*/ref/$(TargetFramework)/System.Net.WebClient.dll" />
+    <FcsReferenceAssembly Include="$(NETCoreTargetingPackRoot)/Microsoft.NETCore.App.Ref/*/ref/$(TargetFramework)/System.Text.Encoding.Extensions.dll" />
+    <EmbeddedResource Include="@(FcsReferenceAssembly)" LogicalName="WasmFcs.Reference.%(Filename).reference.dll" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)/fsharp.core/$(FSharpCoreVersion)/lib/netstandard2.0/FSharp.Core.dll" LogicalName="WasmFcs.Reference.FSharp.Core.reference.dll" Condition="Exists('$(NuGetPackageRoot)/fsharp.core/$(FSharpCoreVersion)/lib/netstandard2.0/FSharp.Core.dll')" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <WasmFcsPath Condition="'$(WasmFcsPath)' == '' and '$(WASM_FCS_DLL)' != ''">$(WASM_FCS_DLL)</WasmFcsPath>
+    <FSharpCoreVersion Condition="'$(FSharpCoreVersion)' == ''">10.1.302</FSharpCoreVersion>
+    <RepositoryUrl>https://github.com/mfakane/wasm-fcs</RepositoryUrl>
+    <RepositoryLicense>MIT</RepositoryLicense>
+  </PropertyGroup>
+</Project>
+

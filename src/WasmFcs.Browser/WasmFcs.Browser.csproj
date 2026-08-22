@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WasmEnableThreads>true</WasmEnableThreads>
+    <EmccMaximumHeapSize>536870912</EmccMaximumHeapSize>
+    <PublishTrimmed>false</PublishTrimmed>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <BlazorWebAssemblyLoadAllGlobalizationData>false</BlazorWebAssemblyLoadAllGlobalizationData>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../WasmFcs.Core/WasmFcs.Core.fsproj" />
+    <PackageReference Include="FSharp.Core" Version="$(FSharpCoreVersion)" />
+    <Reference Include="FSharp.Compiler.Service" Condition="'$(WasmFcsPath)' != ''">
+      <HintPath>$(WasmFcsPath)</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <WasmAssembliesToBundle Include="$(WasmFcsPath)" Condition="'$(WasmFcsPath)' != ''" />
+    <TrimmerRootAssembly Include="WasmFcs.Browser" />
+    <TrimmerRootAssembly Include="WasmFcs.Core" />
+    <TrimmerRootAssembly Include="FSharp.Compiler.Service" />
+    <TrimmerRootAssembly Include="FSharp.Core" />
+  </ItemGroup>
+  <Import Project="../WasmFcs.ReferencePack.props" />
+</Project>

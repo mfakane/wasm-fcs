@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: browser/package-lock.json
+
+      - name: Install browser dependencies
+        run: npm ci --prefix browser
+
+      - name: Typecheck browser package
+        run: npm run typecheck --prefix browser
+
+      - name: Build browser facade
+        run: npm run build:lib --prefix browser
+
+      - name: Check facade package contents
+        run: |
+          set -euo pipefail
+          staging="$RUNNER_TEMP/browser-facade"
+          node tools/package-browser-facade.mjs --output "$staging"
+          npm pack "$staging" --pack-destination "$RUNNER_TEMP"
+          version=$(node --input-type=module -e "import { readFileSync } from 'node:fs'; console.log(JSON.parse(readFileSync('browser/package.json', 'utf8')).version)")
+          package_archive="$RUNNER_TEMP/wasm-fcs-browser-${version}.tgz"
+          test -f "$package_archive"
+          test -f "$staging/LICENSE"
+          test -f "$staging/THIRD-PARTY-NOTICES.md"
+          if tar -tzf "$package_archive" | grep -E 'playground|benchmark|style\.css|node_modules'; then
+            echo "Unexpected application files in facade package" >&2
+            exit 1
+          fi
+          tar -tzf "$package_archive" | grep -q 'package/THIRD-PARTY-NOTICES.md'
+
+      - name: Build Vite application
+        run: npm run build --prefix browser

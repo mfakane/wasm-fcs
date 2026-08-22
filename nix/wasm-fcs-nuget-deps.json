@@ -1,0 +1,15 @@
+[
+  { "pname": "FSharp.Core", "version": "10.0.101", "hash": "sha256-i7crdE0/u+/mFCD1rNFc/iT5TFr8Dae9dNpVRmbpSbY=" },
+  { "pname": "Microsoft.NETCore.Platforms", "version": "1.1.0", "hash": "sha256-FeM40ktcObQJk4nMYShB61H/E8B7tIKfl9ObJ0IOcCM=" },
+  { "pname": "NETStandard.Library", "version": "2.0.3", "hash": "sha256-Prh2RPebz/s8AzHb2sPHg3Jl8s31inv9k+Qxd293ybo=" },
+  { "pname": "System.Buffers", "version": "4.6.1", "hash": "sha256-sARR6R0Bb77Aka0eNh86cBXh2R1AR/fkinRFWypnPXk=" },
+  { "pname": "System.Collections.Immutable", "version": "10.0.2", "hash": "sha256-6bkKg7r7MAtzMLvNLvFAy2slLK6OQIuXjTH2he9aNos=" },
+  { "pname": "System.Diagnostics.DiagnosticSource", "version": "10.0.2", "hash": "sha256-lt0piggvxkHfKmZAOZI8M0q0W/kMld5XwYcBWH3rj1o=" },
+  { "pname": "System.Memory", "version": "4.6.3", "hash": "sha256-JgeK63WMmumF6L+FH5cwJgYdpqXrSDcgTQwtIgTHKVU=" },
+  { "pname": "System.Numerics.Vectors", "version": "4.6.1", "hash": "sha256-K8UAqG3LAvIDLW2Hf54tbp5KeQgOVyObQZhnnUAx8sc=" },
+  { "pname": "System.Reflection.Emit", "version": "4.7.0", "hash": "sha256-Fw/CSRD+wajH1MqfKS3Q/sIrUH7GN4K+F+Dx68UPNIg=" },
+  { "pname": "System.Reflection.Emit.ILGeneration", "version": "4.7.0", "hash": "sha256-GUnQeGo/DtvZVQpFnESGq7lJcjB30/KnDY7Kd2G/ElE=" },
+  { "pname": "System.Reflection.Metadata", "version": "10.0.2", "hash": "sha256-IJRpgEa6qzEMGe1+0DsHJVGHLTvaJAntF4EAt71hrug=" },
+  { "pname": "System.Runtime.CompilerServices.Unsafe", "version": "6.1.2", "hash": "sha256-X2p/U680Zfkr622oc+vg5JYgbDEzE7mLre5DVaayWTc=" }
+]
+

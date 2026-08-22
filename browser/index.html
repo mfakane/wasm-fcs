@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FCS WASM Playground</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <p class="eyebrow">F# Compiler Services / Browser WASM</p>
+        <h1>FCS Playground</h1>
+        <p class="lede">Parse, inspect symbols, and run arbitrary F# in a disposable browser sandbox.</p>
+      </header>
+      <section class="card editor-card">
+        <label for="source">F# source</label>
+        <textarea id="source" spellcheck="false">open System
+
+let answer = 40 + 2
+printfn "hello from F#"
+printfn "answer = %d" answer</textarea>
+        <div class="actions">
+          <button data-command="run" class="primary">Run</button>
+          <button data-command="parse">Parse</button>
+          <button data-command="metadata">Metadata</button>
+          <span id="status" role="status">runtime not started</span>
+        </div>
+      </section>
+      <section class="card output-card">
+        <div class="output-heading"><h2>Result</h2><button id="clear">Clear</button></div>
+        <pre id="output">Choose an operation to start the Browser WASM runtime.</pre>
+      </section>
+      <footer>Source code runs without a file or network capability. Browser WASM requires cross-origin isolation.</footer>
+    </main>
+    <script type="module" src="/src/playground.ts"></script>
+  </body>
+</html>
+

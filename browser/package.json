@@ -1,0 +1,32 @@
+{
+  "name": "wasm-fcs-browser",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist-lib/index.d.ts",
+      "import": "./dist-lib/index.js",
+      "default": "./dist-lib/index.js"
+    }
+  },
+  "main": "./dist-lib/index.js",
+  "types": "./dist-lib/index.d.ts",
+  "files": ["dist-lib"],
+  "sideEffects": false,
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build:lib": "tsc -p tsconfig.lib.json",
+    "preview": "vite preview",
+    "build:runtime": "node ../tools/build-browser-runtime.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "playwright": "1.62.1",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

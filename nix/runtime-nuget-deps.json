@@ -1,0 +1,5 @@
+[
+  { "pname": "FSharp.Core", "version": "10.1.302", "hash": "sha256-9O2hsu+yizilUmsLZ46IlDSqcRE6TC+oZgtiynXMffw=" },
+  { "pname": "Microsoft.NETCore.App.Ref", "version": "10.0.11", "hash": "sha256-42PO6+UIRWFWZ5ZQzLiKa2vDjokmRRHGVRN/xcKh16c=" }
+]
+

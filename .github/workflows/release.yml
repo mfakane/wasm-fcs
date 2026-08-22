@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: browser/package-lock.json
+
+      - name: Install browser dependencies
+        run: npm ci --prefix browser
+
+      - name: Validate tag version
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+
+          const tag = process.env.TAG_NAME;
+          const { version } = JSON.parse(readFileSync('browser/package.json', 'utf8'));
+          if (!tag.startsWith('v') || tag.slice(1) !== version) {
+            throw new Error(`tag ${tag} does not match browser/package.json version ${version}`);
+          }
+          NODE
+
+      - name: Typecheck browser package
+        run: npm run typecheck --prefix browser
+
+      - name: Set up Nix
+        uses: DeterminateSystems/nix-installer-action@v17
+
+      - name: Enable Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Package release artifacts
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          artifact_dir="$RUNNER_TEMP/release-artifacts"
+          facade_dir="$RUNNER_TEMP/browser-facade"
+          runtime_link="$RUNNER_TEMP/browser-runtime"
+          runtime_dir="$RUNNER_TEMP/browser-runtime-package"
+          mkdir -p "$artifact_dir"
+
+          version="${RELEASE_VERSION#v}"
+
+          npm run build:lib --prefix browser
+          node tools/package-browser-facade.mjs --output "$facade_dir"
+          test -d "$facade_dir"
+          facade_archive="$artifact_dir/wasm-fcs-browser-facade-${version}.tgz"
+          npm pack "$facade_dir" --pack-destination "$artifact_dir"
+          mv "$artifact_dir/wasm-fcs-browser-${version}.tgz" "$facade_archive"
+
+          nix build .#browser-runtime -o "$runtime_link"
+          test -d "$runtime_link"
+          mkdir -p "$runtime_dir"
+          cp -r "$runtime_link"/. "$runtime_dir"/
+          cp LICENSE THIRD-PARTY-NOTICES.md "$runtime_dir"/
+          test -f "$runtime_dir/_framework/dotnet.js"
+
+          runtime_archive="$artifact_dir/wasm-fcs-browser-runtime-${version}.tar.gz"
+
+          GZIP=-n tar --sort=name --mtime='UTC 1970-01-01' \
+            --owner=0 --group=0 --numeric-owner --format=gnu \
+            -C "$runtime_dir" -czf "$runtime_archive" .
+
+          sha256sum "$facade_archive" > "$facade_archive.sha256"
+          sha256sum "$runtime_archive" > "$runtime_archive.sha256"
+
+            ARTIFACT_DIR="$artifact_dir" RELEASE_TAG="$RELEASE_VERSION" \
+            RELEASE_VERSION="$version" node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+           import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+
+           const dir = process.env.ARTIFACT_DIR;
+           const fcsSource = readFileSync('nix/wasm-fcs.nix', 'utf8');
+           const fcsRevision = fcsSource.match(/\brev = "([0-9a-f]+)"/)?.[1] ?? null;
+           const files = readdirSync(dir).filter((file) => file.endsWith('.tgz') || file.endsWith('.tar.gz'));
+          const artifacts = files.sort().map((file) => ({
+            file,
+            sha256: createHash('sha256').update(readFileSync(join(dir, file))).digest('hex'),
+            sha256File: `${file}.sha256`,
+          }));
+          writeFileSync(join(dir, 'release-manifest.json'), JSON.stringify({
+             tag: process.env.RELEASE_TAG,
+             version: process.env.RELEASE_VERSION,
+             fcsRevision,
+             artifacts,
+          }, null, 2) + '\n');
+          NODE
+
+      - name: Create GitHub Release and upload artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes
+          fi
+          gh release upload "$GITHUB_REF_NAME" \
+            "$RUNNER_TEMP/release-artifacts"/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber

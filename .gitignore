@@ -1,0 +1,13 @@
+result
+result-*
+bin
+obj
+.direnv
+.gen-tools
+node_modules
+browser/dist
+browser/dist-lib
+browser/public/fcs-runtime
+browser/package-staging
+*.tgz
+benchmark-results.json
