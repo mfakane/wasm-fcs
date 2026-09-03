@@ -46,7 +46,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v17
 
       - name: Enable Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v14
 
       - name: Package release artifacts
         env:
