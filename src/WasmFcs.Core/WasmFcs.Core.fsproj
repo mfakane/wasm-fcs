@@ -9,7 +9,7 @@
       <HintPath>$(WasmFcsPath)</HintPath>
       <Private>true</Private>
     </Reference>
-    <PackageReference Include="FSharp.Compiler.Service" Version="43.11.302" Condition="'$(WasmFcsPath)' == ''" PrivateAssets="all" />
+    <PackageReference Include="FSharp.Compiler.Service" Version="43.12.400" Condition="'$(WasmFcsPath)' == ''" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Engine.fs" />
